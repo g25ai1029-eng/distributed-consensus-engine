@@ -1,0 +1,175 @@
+version: "3.8"
+
+services:
+  node1:
+    build: .
+    container_name: node1
+    hostname: node1
+    environment:
+      NODE_ID: "1"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      MODE: "pbft"
+      KEY_DIR: "/keys"
+      PEERS: >-
+        [{"id":2,"host":"node2","port":5000},{"id":3,"host":"node3","port":5000},{"id":4,"host":"node4","port":5000},{"id":5,"host":"node5","port":5000},{"id":6,"host":"adversary","port":5000}]
+    volumes:
+      - node1-data:/data
+      - shared-keys:/keys
+    networks:
+      - consensus-net
+    ports:
+      - "5001:5000"
+    restart: unless-stopped
+
+  node2:
+    build: .
+    container_name: node2
+    hostname: node2
+    environment:
+      NODE_ID: "2"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      MODE: "pbft"
+      KEY_DIR: "/keys"
+      PEERS: >-
+        [{"id":1,"host":"node1","port":5000},{"id":3,"host":"node3","port":5000},{"id":4,"host":"node4","port":5000},{"id":5,"host":"node5","port":5000},{"id":6,"host":"adversary","port":5000}]
+    volumes:
+      - node2-data:/data
+      - shared-keys:/keys
+    networks:
+      - consensus-net
+    ports:
+      - "5002:5000"
+    restart: unless-stopped
+
+  node3:
+    build: .
+    container_name: node3
+    hostname: node3
+    environment:
+      NODE_ID: "3"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      MODE: "pbft"
+      KEY_DIR: "/keys"
+      PEERS: >-
+        [{"id":1,"host":"node1","port":5000},{"id":2,"host":"node2","port":5000},{"id":4,"host":"node4","port":5000},{"id":5,"host":"node5","port":5000},{"id":6,"host":"adversary","port":5000}]
+    volumes:
+      - node3-data:/data
+      - shared-keys:/keys
+    networks:
+      - consensus-net
+    ports:
+      - "5003:5000"
+    restart: unless-stopped
+
+  node4:
+    build: .
+    container_name: node4
+    hostname: node4
+    environment:
+      NODE_ID: "4"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      MODE: "pbft"
+      KEY_DIR: "/keys"
+      PEERS: >-
+        [{"id":1,"host":"node1","port":5000},{"id":2,"host":"node2","port":5000},{"id":3,"host":"node3","port":5000},{"id":5,"host":"node5","port":5000},{"id":6,"host":"adversary","port":5000}]
+    volumes:
+      - node4-data:/data
+      - shared-keys:/keys
+    networks:
+      - consensus-net
+    ports:
+      - "5004:5000"
+    restart: unless-stopped
+
+  node5:
+    build: .
+    container_name: node5
+    hostname: node5
+    environment:
+      NODE_ID: "5"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      MODE: "pbft"
+      KEY_DIR: "/keys"
+      PEERS: >-
+        [{"id":1,"host":"node1","port":5000},{"id":2,"host":"node2","port":5000},{"id":3,"host":"node3","port":5000},{"id":4,"host":"node4","port":5000},{"id":6,"host":"adversary","port":5000}]
+    volumes:
+      - node5-data:/data
+      - shared-keys:/keys
+    networks:
+      - consensus-net
+    ports:
+      - "5005:5000"
+    restart: unless-stopped
+
+  adversary:
+    build: .
+    container_name: adversary
+    hostname: adversary
+    command: python src/adversary.py
+    environment:
+      NODE_ID: "6"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      MODE: "pbft"
+      KEY_DIR: "/keys"
+      PEERS: >-
+        [{"id":1,"host":"node1","port":5000},{"id":2,"host":"node2","port":5000},{"id":3,"host":"node3","port":5000},{"id":4,"host":"node4","port":5000},{"id":5,"host":"node5","port":5000}]
+    volumes:
+      - adversary-data:/data
+      - shared-keys:/keys
+    networks:
+      - consensus-net
+    ports:
+      - "5006:5000"
+    restart: unless-stopped
+
+  client:
+    build: .
+    container_name: client
+    command: python src/client.py
+    environment:
+      TX_INTERVAL: "2.0"
+      MAX_TX: "0"
+      NODES: >-
+        [{"id":1,"host":"node1","port":5000},{"id":2,"host":"node2","port":5000},{"id":3,"host":"node3","port":5000},{"id":4,"host":"node4","port":5000},{"id":5,"host":"node5","port":5000}]
+    networks:
+      - consensus-net
+    depends_on:
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+    restart: unless-stopped
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:latest
+    container_name: toxiproxy
+    networks:
+      - consensus-net
+    ports:
+      - "8474:8474"
+      - "15001:15001"
+      - "15002:15002"
+      - "15003:15003"
+      - "15004:15004"
+      - "15005:15005"
+    restart: unless-stopped
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
+  node4-data:
+  node5-data:
+  adversary-data:
+  shared-keys:
+
+networks:
+  consensus-net:
+    driver: bridge
